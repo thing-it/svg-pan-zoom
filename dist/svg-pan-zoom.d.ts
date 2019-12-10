@@ -262,6 +262,6 @@ declare namespace SvgPanZoom {
 
 declare const svgPanZoom: SvgPanZoom.Instance;
 
-declare module "svg-pan-zoom" {
+declare module "@thing-it/svg-pan-zoom" {
   export = svgPanZoom;
 }
