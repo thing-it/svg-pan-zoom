@@ -85,6 +85,7 @@ declare namespace SvgPanZoom {
       width: number;
       height: number;
     };
+    rotate: number;
   }
 
   interface Instance {
@@ -199,6 +200,11 @@ declare namespace SvgPanZoom {
      * @return {float} zoom scale
      */
     getZoom(): number;
+
+    rotate(angle: number): Instance;
+    rotateRelative(angle: number): Instance;
+    getRotate(): number;
+    resetRotate(): Instance;
 
     setOnUpdatedCTM(fn: (newCTM: SVGMatrix) => void): Instance;
 

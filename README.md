@@ -338,12 +338,17 @@ When you call `svgPanZoom` method it returns an object with following methods:
 * zoomOut
 * setOnUpdatedCTM
 * getZoom
+* rotate
+* rotateRelative
+* getRotate
 * resetZoom
 * resetPan
+* resetRotate
 * reset
 * fit
 * contain
 * center
+* getCenter
 * updateBBox
 * resize
 * getSizes
@@ -455,6 +460,7 @@ If you need more data about SVG you can call `getSizes`. It will return an objec
   * `height`
   * `x` - x offset
   * `y` - y offset
+  * `rotate` - rotation angle in degrees
 
 Destroy SvgPanZoom instance:
 

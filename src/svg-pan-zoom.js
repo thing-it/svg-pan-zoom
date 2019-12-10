@@ -413,6 +413,33 @@ SvgPanZoom.prototype.computeFromRelativeZoom = function(zoom) {
 };
 
 /**
+ * Rotate
+ *
+ * @param  {Float} angle
+ */
+SvgPanZoom.prototype.rotate = function(angle) {
+  this.viewport.rotate(angle);
+};
+
+/**
+ * Rotate relative
+ *
+ * @param  {Float} relative angle
+ */
+SvgPanZoom.prototype.rotateRelative = function(angle) {
+  this.rotate(this.getRotate() + angle);
+};
+
+/**
+ * Get rotate for public usage
+ *
+ * @return {Float} rotate
+ */
+SvgPanZoom.prototype.getRotate = function() {
+  return this.viewport.getRotate();
+};
+
+/**
  * Set zoom to initial state
  */
 SvgPanZoom.prototype.resetZoom = function() {
@@ -429,11 +456,19 @@ SvgPanZoom.prototype.resetPan = function() {
 };
 
 /**
+ * Set pan to initial state
+ */
+SvgPanZoom.prototype.resetRotate = function() {
+  this.rotate(this.viewport.getOriginalState().rotate);
+};
+
+/**
  * Set pan and zoom to initial state
  */
 SvgPanZoom.prototype.reset = function() {
   this.resetZoom();
   this.resetPan();
+  this.resetRotate();
 };
 
 /**
@@ -583,13 +618,20 @@ SvgPanZoom.prototype.contain = function() {
  * Does not zoom/fit/contain image
  */
 SvgPanZoom.prototype.center = function() {
+  this.getPublicInstance().pan(this.getCenter());
+};
+
+/**
+ * Get viewport center
+ */
+SvgPanZoom.prototype.getCenter = function() {
   var viewBox = this.viewport.getViewBox(),
     offsetX =
       (this.width - (viewBox.width + viewBox.x * 2) * this.getZoom()) * 0.5,
     offsetY =
       (this.height - (viewBox.height + viewBox.y * 2) * this.getZoom()) * 0.5;
 
-  this.getPublicInstance().pan({ x: offsetX, y: offsetY });
+  return { x: offsetX, y: offsetY };
 };
 
 /**
@@ -869,6 +911,17 @@ SvgPanZoom.prototype.getPublicInstance = function() {
       getZoom: function() {
         return that.getRelativeZoom();
       },
+      rotate: function(angle) {
+        that.rotate(angle);
+        return that.pi;
+      },
+      rotateRelative: function(angle) {
+        that.rotateRelative(angle);
+        return that.pi;
+      },
+      getRotate: function() {
+        return that.getRotate();
+      },
       // CTM update
       setOnUpdatedCTM: function(fn) {
         that.options.onUpdatedCTM =
@@ -881,6 +934,10 @@ SvgPanZoom.prototype.getPublicInstance = function() {
         return that.pi;
       },
       resetPan: function() {
+        that.resetPan();
+        return that.pi;
+      },
+      resetRotate: function() {
         that.resetPan();
         return that.pi;
       },
@@ -901,6 +958,9 @@ SvgPanZoom.prototype.getPublicInstance = function() {
         that.center();
         return that.pi;
       },
+      getCenter: function() {
+        return that.getCenter();
+      },
       // Size and Resize
       updateBBox: function() {
         that.updateBBox();
@@ -915,7 +975,8 @@ SvgPanZoom.prototype.getPublicInstance = function() {
           width: that.width,
           height: that.height,
           realZoom: that.getZoom(),
-          viewBox: that.viewport.getViewBox()
+          viewBox: that.viewport.getViewBox(),
+          rotate: that.getRotate()
         };
       },
       // Destroy

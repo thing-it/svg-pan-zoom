@@ -221,8 +221,8 @@ ShadowViewport.prototype.init = function(viewport, options) {
   this.options = options;
 
   // State cache
-  this.originalState = { zoom: 1, x: 0, y: 0 };
-  this.activeState = { zoom: 1, x: 0, y: 0 };
+  this.originalState = { zoom: 1, x: 0, y: 0, rotate: 0 };
+  this.activeState = { zoom: 1, x: 0, y: 0, rotate: 0 };
 
   this.updateCTMCached = Utils.proxy(this.updateCTM, this);
 
@@ -412,6 +412,38 @@ ShadowViewport.prototype.getPan = function() {
 };
 
 /**
+ * Get rotate
+ *
+ * @return {Float} angle
+ */
+ShadowViewport.prototype.getRotate = function() {
+  return this.activeState.rotate;
+};
+
+/**
+ * Get rotate transformation
+ *
+ * @return {Object} angle and point of rotation
+ */
+ShadowViewport.prototype.getRotateTransform = function() {
+  return {
+    angle: this.getRotate(),
+    x: this.getViewBox().width / 2,
+    y: this.getViewBox().height / 2
+  };
+};
+
+/**
+ * Set rotate
+ *
+ * @param {Float} angle
+ */
+ShadowViewport.prototype.rotate = function(angle) {
+  this.activeState.rotate = angle;
+  this.updateCTMOnNextFrame();
+};
+
+/**
  * Return cached viewport CTM value that can be safely modified
  *
  * @return {SVGMatrix}
@@ -554,7 +586,7 @@ ShadowViewport.prototype.updateCTM = function() {
   var ctm = this.getCTM();
 
   // Updates SVG element
-  SvgUtils.setCTM(this.viewport, ctm, this.defs);
+  SvgUtils.setCTM(this.viewport, ctm, this.defs, this.getRotateTransform());
 
   // Free the lock
   this.pendingUpdate = false;
@@ -1005,6 +1037,33 @@ SvgPanZoom.prototype.computeFromRelativeZoom = function(zoom) {
 };
 
 /**
+ * Rotate
+ *
+ * @param  {Float} angle
+ */
+SvgPanZoom.prototype.rotate = function(angle) {
+  this.viewport.rotate(angle);
+};
+
+/**
+ * Rotate relative
+ *
+ * @param  {Float} relative angle
+ */
+SvgPanZoom.prototype.rotateRelative = function(angle) {
+  this.rotate(this.getRotate() + angle);
+};
+
+/**
+ * Get rotate for public usage
+ *
+ * @return {Float} rotate
+ */
+SvgPanZoom.prototype.getRotate = function() {
+  return this.viewport.getRotate();
+};
+
+/**
  * Set zoom to initial state
  */
 SvgPanZoom.prototype.resetZoom = function() {
@@ -1021,11 +1080,19 @@ SvgPanZoom.prototype.resetPan = function() {
 };
 
 /**
+ * Set pan to initial state
+ */
+SvgPanZoom.prototype.resetRotate = function() {
+  this.rotate(this.viewport.getOriginalState().rotate);
+};
+
+/**
  * Set pan and zoom to initial state
  */
 SvgPanZoom.prototype.reset = function() {
   this.resetZoom();
   this.resetPan();
+  this.resetRotate();
 };
 
 /**
@@ -1175,13 +1242,20 @@ SvgPanZoom.prototype.contain = function() {
  * Does not zoom/fit/contain image
  */
 SvgPanZoom.prototype.center = function() {
+  this.getPublicInstance().pan(this.getCenter());
+};
+
+/**
+ * Get viewport center
+ */
+SvgPanZoom.prototype.getCenter = function() {
   var viewBox = this.viewport.getViewBox(),
     offsetX =
       (this.width - (viewBox.width + viewBox.x * 2) * this.getZoom()) * 0.5,
     offsetY =
       (this.height - (viewBox.height + viewBox.y * 2) * this.getZoom()) * 0.5;
 
-  this.getPublicInstance().pan({ x: offsetX, y: offsetY });
+  return { x: offsetX, y: offsetY };
 };
 
 /**
@@ -1461,6 +1535,17 @@ SvgPanZoom.prototype.getPublicInstance = function() {
       getZoom: function() {
         return that.getRelativeZoom();
       },
+      rotate: function(angle) {
+        that.rotate(angle);
+        return that.pi;
+      },
+      rotateRelative: function(angle) {
+        that.rotateRelative(angle);
+        return that.pi;
+      },
+      getRotate: function() {
+        return that.getRotate();
+      },
       // CTM update
       setOnUpdatedCTM: function(fn) {
         that.options.onUpdatedCTM =
@@ -1473,6 +1558,10 @@ SvgPanZoom.prototype.getPublicInstance = function() {
         return that.pi;
       },
       resetPan: function() {
+        that.resetPan();
+        return that.pi;
+      },
+      resetRotate: function() {
         that.resetPan();
         return that.pi;
       },
@@ -1493,6 +1582,9 @@ SvgPanZoom.prototype.getPublicInstance = function() {
         that.center();
         return that.pi;
       },
+      getCenter: function() {
+        return that.getCenter();
+      },
       // Size and Resize
       updateBBox: function() {
         that.updateBBox();
@@ -1507,7 +1599,8 @@ SvgPanZoom.prototype.getPublicInstance = function() {
           width: that.width,
           height: that.height,
           realZoom: that.getZoom(),
-          viewBox: that.viewport.getViewBox()
+          viewBox: that.viewport.getViewBox(),
+          rotate: that.getRotate()
         };
       },
       // Destroy
@@ -1714,9 +1807,9 @@ module.exports = {
    * @param {SVGMatrix} matrix  CTM
    * @param {SVGElement} defs
    */
-  setCTM: function(element, matrix, defs) {
+  setCTM: function(element, matrix, defs, rotate) {
     var that = this,
-      s =
+      transform =
         "matrix(" +
         matrix.a +
         "," +
@@ -1731,13 +1824,31 @@ module.exports = {
         matrix.f +
         ")";
 
-    element.setAttributeNS(null, "transform", s);
+    var transformCss = transform;
+    if (rotate.angle !== 0) {
+      transform +=
+        " rotate(" + rotate.angle + "," + rotate.x + "," + rotate.y + ")";
+      transformCss +=
+        " translate(" +
+        rotate.x +
+        "px," +
+        rotate.y +
+        "px) rotate(" +
+        rotate.angle +
+        "deg) translate(-" +
+        rotate.x +
+        "px,-" +
+        rotate.y +
+        "px)";
+    }
+
+    element.setAttributeNS(null, "transform", transform);
     if ("transform" in element.style) {
-      element.style.transform = s;
+      element.style.transform = transformCss;
     } else if ("-ms-transform" in element.style) {
-      element.style["-ms-transform"] = s;
+      element.style["-ms-transform"] = transformCss;
     } else if ("-webkit-transform" in element.style) {
-      element.style["-webkit-transform"] = s;
+      element.style["-webkit-transform"] = transformCss;
     }
 
     // IE has a bug that makes markers disappear on zoom (when the matrix "a" and/or "d" elements change)

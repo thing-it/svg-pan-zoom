@@ -63,7 +63,6 @@
     "gulp-uglify": "^3.0.2",
     "prettier": "^1.18.2",
     "qunit": "^2.9.3",
-    "qunitjs": "npm:qunit@^2.9.3",
     "tslint": "^4.5.1",
     "typescript": "^3.6.4",
     "vinyl-buffer": "^1.0.1",
