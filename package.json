@@ -1,5 +1,5 @@
 {
-  "name": "svg-pan-zoom",
+  "name": "@thing-it/svg-pan-zoom",
   "version": "3.6.1",
   "main": "dist/svg-pan-zoom.js",
   "module": "src/svg-pan-zoom.js",
