@@ -1,4 +1,4 @@
-// svg-pan-zoom v3.6.1
+// svg-pan-zoom v3.6.2
 // https://github.com/ariutta/svg-pan-zoom
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 var SvgUtils = require("./svg-utilities");
@@ -224,6 +224,8 @@ ShadowViewport.prototype.init = function(viewport, options) {
   this.originalState = { zoom: 1, x: 0, y: 0, rotate: 0 };
   this.activeState = { zoom: 1, x: 0, y: 0, rotate: 0 };
 
+  this.rotationPoint = { x: null, y: null };
+
   this.updateCTMCached = Utils.proxy(this.updateCTM, this);
 
   // Create a custom requestAnimationFrame taking in account refreshRate
@@ -428,8 +430,8 @@ ShadowViewport.prototype.getRotate = function() {
 ShadowViewport.prototype.getRotateTransform = function() {
   return {
     angle: this.getRotate(),
-    x: this.getViewBox().width / 2,
-    y: this.getViewBox().height / 2
+    x: this.rotationPoint.x || this.getViewBox().width / 2,
+    y: this.rotationPoint.y || this.getViewBox().height / 2
   };
 };
 
@@ -437,9 +439,17 @@ ShadowViewport.prototype.getRotateTransform = function() {
  * Set rotate
  *
  * @param {Float} angle
+ * @param {Float} cx
+ * @param {Float} cy
  */
-ShadowViewport.prototype.rotate = function(angle) {
+ShadowViewport.prototype.rotate = function(angle, cx, cy) {
   this.activeState.rotate = angle;
+
+  if (this.rotationPoint.x !== cx || this.rotationPoint.y !== cy) {
+    this.rotationPoint.x = cx;
+    this.rotationPoint.y = cy;
+  }
+
   this.updateCTMOnNextFrame();
 };
 
@@ -1039,10 +1049,12 @@ SvgPanZoom.prototype.computeFromRelativeZoom = function(zoom) {
 /**
  * Rotate
  *
- * @param  {Float} angle
+ * @param {Float} angle
+ * @param {Float} cx
+ * @param {Float} cy
  */
-SvgPanZoom.prototype.rotate = function(angle) {
-  this.viewport.rotate(angle);
+SvgPanZoom.prototype.rotate = function(angle, cx, cy) {
+  this.viewport.rotate(angle, cx, cy);
 };
 
 /**
@@ -1535,8 +1547,8 @@ SvgPanZoom.prototype.getPublicInstance = function() {
       getZoom: function() {
         return that.getRelativeZoom();
       },
-      rotate: function(angle) {
-        that.rotate(angle);
+      rotate: function(angle, cx, cy) {
+        that.rotate(angle, cx, cy);
         return that.pi;
       },
       rotateRelative: function(angle) {
